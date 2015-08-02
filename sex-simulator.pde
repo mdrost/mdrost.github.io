@@ -1,5 +1,3 @@
-// Global variables
-
 int steps = 0;
 
 int daysPerYear = 365;
@@ -9,7 +7,6 @@ int startPopulationCount = 10000;
 Person[] population = new Person[startPopulationCount];
 
 float meanPartnersPerYear = 2.75;
-//float meanPartnersPerYear = 0.01;
 
 float meanPartnersPerStep = meanPartnersPerYear / daysPerYear;
 
@@ -108,7 +105,7 @@ void step()
 					pi.isLookingForPartner = false;
 					pj.partner = pi;
 					pj.isLookingForPartner = false;
-					++matched;
+					matched += 2;
 					break;
 				}
 			}
