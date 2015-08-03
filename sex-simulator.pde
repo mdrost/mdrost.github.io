@@ -1,8 +1,10 @@
 int steps = 0;
 
+int millisFirstStep;
+
 int daysPerYear = 365;
 
-int startPopulationCount = 10000;
+int startPopulationCount = 100000;
 
 Person[] population = new Person[startPopulationCount];
 
@@ -14,11 +16,15 @@ ArrayList<Person> lookingForPartnerPopulation = new ArrayList<Person>();
 
 float exposureRisk = 0.01;
 
-int startInfectedPopulationCount = 100;
+int startInfectedPopulationCount = 10;
 
 int infectedPopulationCount = 0;
 
 int matched = 0;
+
+int infectedHistorySize = 100;
+
+ArrayList<int> infectedHistory = new ArrayList<int>();
 
 void setup()
 {
@@ -57,14 +63,23 @@ void draw()
 	fill(255);
 	text("Steps: " + steps, 10, 20);
 	text("Draws: " + frameCount, 10, 35);
-	text("Infected: " + infectedPopulationCount, 10, 60);
-	text("Matched: " + (matched * daysPerYear / steps / startPopulationCount), 10, 75);
+	//text("Matched: " + (matched * daysPerYear / steps / startPopulationCount), 10, 60);
+	text("Population: " + startPopulationCount, 10, 60);
+	text("Total infected: " + infectedPopulationCount, 10, 75);
+	int infectedHistorySum = 0;
+	for(int i = 0; i < infectedHistory.size(); ++i) infectedHistorySum += infectedHistory.get(i);
+	text("Infected in last " + infectedHistorySize + " steps: " + infectedHistorySum, 10, 90);
 }
 
 void logic()
 {
+	if(steps == 0)
+	{
+		millisFirstStep = millis();
+	}
 	step();
-	while((millis() / frameCount) < (1000 / 60))
+	ms = ((millis() - millisFirstStep) / frameCount);
+	while(((millis() - millisFirstStep) / frameCount) < (1 * 1000 / 60))
 	{
 		step();
 	}
@@ -82,28 +97,28 @@ void step()
 			p.isLookingForPartner = random(1.0) < (p.expectedPartnersPerYear / daysPerYear);
 			if(p.isLookingForPartner)
 			{
-				p.isLookingForPartner = true;
 				lookingForPartnerPopulation.add(p);
 			}
 		}
 	}
 	
-	//println("size: " + lookingForPartnerPopulation.size());
 	for(int i = 0; i < lookingForPartnerPopulation.size(); ++i)
 	{
 		Person pi = lookingForPartnerPopulation.get(i);
 		if(pi.isLookingForPartner)
 		{
-			//println("isLooking");
 			for(int j = 0; j < lookingForPartnerPopulation.size(); ++j)
 			{
 				Person pj = lookingForPartnerPopulation.get(j);
 				if(pi != pj && pj.isLookingForPartner)
 				{
-					//println("Partnes matched!");
+					if(pi.partner) pi.partner.partner = null;
 					pi.partner = pj;
+					pi.partersCount += 1;
 					pi.isLookingForPartner = false;
+					if(pj.partner) pj.partner.partner = null;
 					pj.partner = pi;
+					pj.partnersCount += 1;
 					pj.isLookingForPartner = false;
 					matched += 2;
 					break;
@@ -112,14 +127,29 @@ void step()
 		}
 	}
 	
+	// remove from lookingForPartnerPopulation list those who doesn't looking for partners
 	for(int i = lookingForPartnerPopulation.size() - 1; i >= 0; --i)
 	{
 		if(!lookingForPartnerPopulation.get(i).isLookingForPartner)
 		{
-			//println("removing");
 			lookingForPartnerPopulation.remove(i);
 		}
 	}
+	
+	// having sex
+	int infected = 0;
+	for(int i = 0; i < population.length; ++i)
+	{
+		Person p = population[i];
+		if(p.partner && p.partner.isInfected && !p.isInfected)
+		{
+			p.isInfected = random(1.0) < exposureRisk;
+			if(p.isInfected) infected += 1;
+		}
+	}
+	infectedPopulationCount += infected;
+	if(infectedHistory.size() == infectedHistorySize) infectedHistory.remove(0);
+	infectedHistory.add(infected);
 }
 
 class Person
