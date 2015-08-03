@@ -4,7 +4,7 @@ int millisFirstStep;
 
 int daysPerYear = 365;
 
-int startPopulationCount = 100000;
+int startPopulationCount = 50000;
 
 Person[] population = new Person[startPopulationCount];
 
