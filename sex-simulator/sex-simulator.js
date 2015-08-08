@@ -1,7 +1,38 @@
+// infections
+
+var minLatentPeriod;
+
+var maxLatentPeriod;
+
+var minCommunicabilityPeriod;
+
+var maxCommunicabilityPeriod;
+
+//var minIncubationPeriod = 0;
+
+//var maxIncubationPeriod = 0;
+
+var exposureRisk;
+
+function Infection()
+{
+	this.duration = 0;
+	this.latentPeriod = floor(random(minLatentPeriod, maxLatentPeriod + 1));
+	this.communicabilityPeriod = floor(random(minCommunicabilityPeriod, maxCommunicabilityPeriod + 1));
+	//this.incubationPeriod = floor(random(minIncubationPeriod, maxIncubationPeriod + 1));
+	this.exposureRisk = 0.1;
+	
+	this.infect = function(person)
+	{
+		person.infections.push(new Infection());
+	}
+}
+
 var Person = function()
 {
 	this.isLookingForPartner = false;
 	this.isInfected = false;
+	this.infections = [];
 	this.expectedPartnersPerYear = 0.0;
 	this.partner = null;
 	this.partnersCount = 0;
@@ -13,7 +44,7 @@ var daysPerYear = 365;
 
 // program variables
 
-var programRunning = true;
+var programRunning = false;
 
 // simulation variables
 
@@ -29,6 +60,10 @@ var currentFrameMillis;
 
 var population;
 
+var populationCount;
+
+var meanPartnersPerYear;
+
 var lookingForPartnerPopulation;
 
 var lookingForPartnerPopulationSize;
@@ -43,19 +78,13 @@ var matched;
 
 // other variables
 
-var programFrameRate = 5;
+var programFrameRate = 10;
 
-var maxSteps = 7000;
-
-var startPopulationCount = 50000;
-
-var meanPartnersPerYear = 2.75;
-
-var meanPartnersPerStep = meanPartnersPerYear / daysPerYear;
+var maxSteps = 10000;
 
 var exposureRisk = 0.1;
 
-var startInfectedPopulationCount = 10;
+var startInfectedPopulationCount = 100;
 
 var infectedPartialHistorySize = 100;
 
@@ -63,17 +92,30 @@ function initializeSimulationVariables()
 {
 	steps = 0;
 	population = [];
+	populationCount = populationSizes[populationSizeSlider.value()];
+	meanPartnersPerYear = meanPartnersPerYearSlider.value() / 20;
 	lookingForPartnerPopulation = []
 	lookingForPartnerPopulationSize = 0;
+	
+	minLatentPeriod = infectionMinLatentPeriodSlider.value();
+	maxLatentPeriod = infectionMaxLatentPeriodSlider.value();
+	maxLatentPeriod = max(minLatentPeriod, maxLatentPeriod);
+	
+	minCommunicabilityPeriod = infectionMinCommunicabilityPeriodSlider.value();
+	maxCommunicabilityPeriod = infectionMaxCommunicabilityPeriodSlider.value();
+	maxCommunicabilityPeriod = max(minCommunicabilityPeriod, maxCommunicabilityPeriod);
+	
 	infectedHistory = [];
 	infectedPartialHistory = [];
 	infectedPopulationCount = 0;
+	
 	matched = 0;
 	
-	for(var i = 0; i < startPopulationCount; ++i)
+	var deviation = sqrt(2*log(meanPartnersPerYear));
+	for(var i = 0; i < populationCount; ++i)
 	{
 		var p = new Person();
-		p.expectedPartnersPerYear = meanPartnersPerYear;
+		p.expectedPartnersPerYear = exp(randomGaussian(0, deviation));
 		population.push(p);
 		lookingForPartnerPopulation.push(p);
 	}
@@ -85,6 +127,9 @@ function initializeSimulationVariables()
 		{
 			p = population[int(random(population.length))];
 		}
+		var inf = new Infection();
+		inf.duration = floor(random(0, inf.latentPeriod + inf.communicabilityPeriod + 1));
+		p.infections.push(inf);
 		p.isInfected = true;
 		++infectedPopulationCount;
 	}
@@ -94,15 +139,39 @@ function initializeSimulationVariables()
 
 // elements
 
+var startStopButton;
+
+function onStartStopButtonClicked() {
+	programRunning = !programRunning;
+	
+	if(programRunning) {
+		initializeSimulationVariables();
+	}
+}
+
 var restartButton;
 
 function onRestartButtonClicked() {
-	
+	initializeSimulationVariables();
 }
 
 var populationSizeSlider;
 
 var populationSizes = [1000, 2000, 5000, 10000, 20000, 50000, 100000]
+
+var meanPartnersPerYearSlider;
+
+var infectionMinLatentPeriodSlider;
+
+var infectionMaxLatentPeriodSlider;
+
+var infectionMinCommunicabilityPeriodSlider;
+
+var infectionMaxCommunicabilityPeriodSlider;
+
+//var infectionMinIncubationPeriodSlider;
+
+//var infectionMaxIncubationPeriodSlider;
 
 var infectedChart;
 
@@ -111,12 +180,32 @@ var infectedChartSeries;
 function setup() {
 	createCanvas(windowWidth, windowHeight);
 	
+	startStopButton = createButton("Start/Stop");
+	startStopButton.text = "Derp";
+	startStopButton.position(10, 10);
+	startStopButton.mouseClicked(onStartStopButtonClicked);
+	
 	restartButton = createButton("Restart");
-	restartButton.position(100, 0);
+	restartButton.position(120, 10);
 	restartButton.mouseClicked(onRestartButtonClicked);
 	
 	populationSizeSlider = createSlider(0, populationSizes.length - 1, 3);
-	populationSizeSlider.position(0, 50);
+	populationSizeSlider.position(0, 90);
+	
+	meanPartnersPerYearSlider = createSlider(20, 200, 55);
+	meanPartnersPerYearSlider.position(0, 160)
+	
+	infectionMinLatentPeriodSlider = createSlider(0, 100, 2);
+	infectionMinLatentPeriodSlider.position(0, 250);
+	
+	infectionMaxLatentPeriodSlider = createSlider(0, 100, 7);
+	infectionMaxLatentPeriodSlider.position(0, 340);
+	
+	infectionMinCommunicabilityPeriodSlider = createSlider(1, 200, 30);
+	infectionMinCommunicabilityPeriodSlider.position(0, 430);
+	
+	infectionMaxCommunicabilityPeriodSlider = createSlider(1, 200, 120);
+	infectionMaxCommunicabilityPeriodSlider.position(0, 520);
 	
 	infectedChart = new Highcharts.Chart({
 		chart: {
@@ -148,7 +237,7 @@ function setup() {
 			}
 		},
 		series: [{
-			name: 'Global',
+			name: 'All infected',
 			data: []
 		}]
 	});
@@ -157,7 +246,7 @@ function setup() {
 	initializeSimulationVariables();
 	
 	frameRate(programFrameRate);
-	textSize(20);
+	textSize(16);
 }
 
 function logic()
@@ -167,8 +256,6 @@ function logic()
 	}
 	var start = millis();
 	step();
-	console.log("start:", start);
-	console.log("end:", start + 1000/programFrameRate - lastDrawTime);
 	while(steps < maxSteps && (millis() < (start + 1000/programFrameRate - lastDrawTime))) {
 		step();
 	}
@@ -184,23 +271,55 @@ function draw() {
 	
 	background(255);
 	
+	textAlign(LEFT);
+	text("Population size:", 10, 60);
 	textAlign(CENTER);
-	text(populationSizes[populationSizeSlider.value()], 100, 45);
+	text(populationSizes[populationSizeSlider.value()], 100, 80);
+
+	textAlign(LEFT);
+	text("Mean partners per year:", 10, 130);
+	textAlign(CENTER);
+	text((meanPartnersPerYearSlider.value()/20).toFixed(2), 100, 150);
 	
 	textAlign(LEFT);
-	text("Steps: " + steps, 200, 30);
-	text("Draws: " + frameCount, 350, 30);
-	text("Population: " + startPopulationCount, 500, 30);
-	text("Total infected: " + infectedPopulationCount, 750, 30);
+	text("Infection minimum\nlatent period:", 10, 200);
+	textAlign(CENTER);
+	text(infectionMinLatentPeriodSlider.value(), 100, 240);
+	
+	textAlign(LEFT);
+	text("Infection maximum\nlatent period:", 10, 290);
+	textAlign(CENTER);
+	text(infectionMaxLatentPeriodSlider.value(), 100, 330);
+
+	textAlign(LEFT);
+	text("Infection minimum\ncommunicability period:", 10, 380);
+	textAlign(CENTER);
+	text(infectionMinCommunicabilityPeriodSlider.value(), 100, 420);
+	
+	textAlign(LEFT);
+	text("Infection maximum\ncommunicability period:", 10, 470);
+	textAlign(CENTER);
+	text(infectionMaxCommunicabilityPeriodSlider.value(), 100, 510);
+
+	textAlign(LEFT);
+	text("Days: " + steps, 250, 30);
+	//text("Draws: " + frameCount, 350, 30);
+	text("Population: " + populationCount, 400, 30);
+	text("Total infected: " + infectedPopulationCount, 600, 30);
 	var infectedPartialHistorySum = 0;
 	for(var i = 0; i < infectedPartialHistory.length; ++i) infectedPartialHistorySum += infectedPartialHistory[i];
-	text("Infected in last " + infectedPartialHistorySize + " steps: " + infectedPartialHistorySum, 1000, 30);
-	text("Matched: " + (matched * daysPerYear / steps / startPopulationCount).toFixed(2), 200, 70);
-	text("Logic: " + floor(lastLogicTime), 400, 70);
-	text("Draw: " + floor(lastDrawTime), 550, 70);
-	text("Frame: " + floor(lastFrameTime), 700, 70);
+	text("Infected in last " + infectedPartialHistorySize + " days: " + infectedPartialHistorySum, 850, 30);
+	//text("Matched: " + (matched * daysPerYear / steps / populationCount).toFixed(2), 250, 70);
+	//text("Logic: " + floor(lastLogicTime), 400, 70);
+	//text("Draw: " + floor(lastDrawTime), 550, 70);
+	//text("Frame: " + floor(lastFrameTime), 700, 70);
+	text("Min. latent period: " + minLatentPeriod, 250, 70);
+	text("Max. latent period: " + maxLatentPeriod, 450, 70);
+	text("Min. communicability period: " + minCommunicabilityPeriod, 650, 70);
+	text("Max. communicability period: " + maxCommunicabilityPeriod, 950, 70);
 	
-	infectedChart.redraw();
+	infectedChartSeries.setData(infectedHistory);
+	//infectedChart.redraw();
 	
 	var drawEnd = millis();
 	lastDrawTime = drawEnd - drawStart;
@@ -264,23 +383,59 @@ function matchPartners()
 
 function haveSex()
 {
+	for(var i = 0; i < population.length; ++i)
+	{
+		var p = population[i];
+		for(var j = p.infections.length - 1; j >= 0; --j)
+		{
+			var inf = p.infections[j]
+			inf.duration += 1;
+			if(inf.duration > (inf.latentPeriod + inf.communicabilityPeriod)) {
+				p.infections.splice(j, 1);
+				if(p.infections.length == 0) {
+					p.isInfected = false;
+					infectedPopulationCount -= 1;
+				}
+			}
+		}
+	}
+	
 	var infected = 0;
 	for(var i = 0; i < population.length; ++i)
 	{
 		var p = population[i];
-		if(p.partner && p.partner.isInfected && !p.isInfected)
+		if(!p.partner) continue;
+		for(var j = 0; j < p.infections.length; ++j)
 		{
-			p.isInfected = random(1.0) < exposureRisk;
-			if(p.isInfected) infected += 1;
+			var inf = p.infections[j];
+			if(inf.duration <= inf.latentPeriod) continue;
+			var partnerHasInfection = false;
+			var pp = p.partner;
+			for(var k = 0; k < pp.infections.length; ++k) {
+				if(pp.infections[k].constructor === inf.constructor) {
+					partnerHasInfection = true;
+					break;
+				}
+			}
+			if(!partnerHasInfection) {
+				partnerHasInfection = random(1.0) < inf.exposureRisk;
+				if(partnerHasInfection) {
+					inf.infect(pp);
+					if(pp.infections.length == 1) {
+						infected += 1;
+					}
+				}
+			}
 		}
 	}
+	
 	infectedPopulationCount += infected;
 	infectedHistory.push(infectedPopulationCount / population.length);
 	if(infectedPartialHistory.length == infectedPartialHistorySize) infectedPartialHistory.splice(0, 1);
 	infectedPartialHistory.push(infected);
 	
-	if(steps % 10 == 1)
-	infectedChartSeries.addPoint(infectedPopulationCount, false);
+	//if(steps % 10 == 1)
+	//infectedChartSeries.addPoint(infectedPopulationCount, false);
 }
 
 function step()
