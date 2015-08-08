@@ -20,7 +20,7 @@ function Infection()
 	this.latentPeriod = floor(random(minLatentPeriod, maxLatentPeriod + 1));
 	this.communicabilityPeriod = floor(random(minCommunicabilityPeriod, maxCommunicabilityPeriod + 1));
 	//this.incubationPeriod = floor(random(minIncubationPeriod, maxIncubationPeriod + 1));
-	this.exposureRisk = 0.1;
+	this.exposureRisk = exposureRisk;
 	
 	this.infect = function(person)
 	{
@@ -82,8 +82,6 @@ var programFrameRate = 10;
 
 var maxSteps = 10000;
 
-var exposureRisk = 0.1;
-
 var startInfectedPopulationCount = 100;
 
 var infectedPartialHistorySize = 100;
@@ -104,6 +102,8 @@ function initializeSimulationVariables()
 	minCommunicabilityPeriod = infectionMinCommunicabilityPeriodSlider.value();
 	maxCommunicabilityPeriod = infectionMaxCommunicabilityPeriodSlider.value();
 	maxCommunicabilityPeriod = max(minCommunicabilityPeriod, maxCommunicabilityPeriod);
+	
+	exposureRisk = infectionExposureRiskSlider.value() / 100;
 	
 	infectedHistory = [];
 	infectedPartialHistory = [];
@@ -173,6 +173,8 @@ var infectionMaxCommunicabilityPeriodSlider;
 
 //var infectionMaxIncubationPeriodSlider;
 
+var infectionExposureRiskSlider;
+
 var infectedChart;
 
 var infectedChartSeries;
@@ -206,6 +208,9 @@ function setup() {
 	
 	infectionMaxCommunicabilityPeriodSlider = createSlider(1, 200, 120);
 	infectionMaxCommunicabilityPeriodSlider.position(0, 520);
+	
+	infectionExposureRiskSlider = createSlider(1, 100, 5);
+	infectionExposureRiskSlider.position(0, 590);
 	
 	infectedChart = new Highcharts.Chart({
 		chart: {
@@ -300,6 +305,11 @@ function draw() {
 	text("Infection maximum\ncommunicability period:", 10, 470);
 	textAlign(CENTER);
 	text(infectionMaxCommunicabilityPeriodSlider.value(), 100, 510);
+	
+	textAlign(LEFT);
+	text("Infection exposure risk:", 10, 560);
+	textAlign(CENTER);
+	text(infectionExposureRiskSlider.value() + "%", 100, 580);
 
 	textAlign(LEFT);
 	text("Days: " + steps, 250, 30);
@@ -313,10 +323,11 @@ function draw() {
 	//text("Logic: " + floor(lastLogicTime), 400, 70);
 	//text("Draw: " + floor(lastDrawTime), 550, 70);
 	//text("Frame: " + floor(lastFrameTime), 700, 70);
-	text("Min. latent period: " + minLatentPeriod, 250, 70);
-	text("Max. latent period: " + maxLatentPeriod, 450, 70);
-	text("Min. communicability period: " + minCommunicabilityPeriod, 650, 70);
-	text("Max. communicability period: " + maxCommunicabilityPeriod, 950, 70);
+	text("Min. latent period: " + minLatentPeriod, 250, 50);
+	text("Max. latent period: " + maxLatentPeriod, 250, 70);
+	text("Min. communicability period: " + minCommunicabilityPeriod, 500, 50);
+	text("Max. communicability period: " + maxCommunicabilityPeriod, 500, 70);
+	text("Exposure risk: " + (exposureRisk * 100) + "%", 900, 50);
 	
 	infectedChartSeries.setData(infectedHistory);
 	//infectedChart.redraw();
