@@ -4,9 +4,9 @@ var minLatentPeriod;
 
 var maxLatentPeriod;
 
-var minCommunicabilityPeriod;
+var minInfectivityPeriod;
 
-var maxCommunicabilityPeriod;
+var maxInfectivityPeriod;
 
 //var minIncubationPeriod = 0;
 
@@ -18,7 +18,7 @@ function Infection()
 {
 	this.duration = 0;
 	this.latentPeriod = floor(random(minLatentPeriod, maxLatentPeriod + 1));
-	this.communicabilityPeriod = floor(random(minCommunicabilityPeriod, maxCommunicabilityPeriod + 1));
+	this.infectivityPeriod = floor(random(minInfectivityPeriod, maxInfectivityPeriod + 1));
 	//this.incubationPeriod = floor(random(minIncubationPeriod, maxIncubationPeriod + 1));
 	this.exposureRisk = exposureRisk;
 	
@@ -99,9 +99,9 @@ function initializeSimulationVariables()
 	maxLatentPeriod = infectionMaxLatentPeriodSlider.value();
 	maxLatentPeriod = max(minLatentPeriod, maxLatentPeriod);
 	
-	minCommunicabilityPeriod = infectionMinCommunicabilityPeriodSlider.value();
-	maxCommunicabilityPeriod = infectionMaxCommunicabilityPeriodSlider.value();
-	maxCommunicabilityPeriod = max(minCommunicabilityPeriod, maxCommunicabilityPeriod);
+	minInfectivityPeriod = infectionMinInfectivityPeriodSlider.value();
+	maxInfectivityPeriod = infectionMaxInfectivityPeriodSlider.value();
+	maxInfectivityPeriod = max(minInfectivityPeriod, maxInfectivityPeriod);
 	
 	exposureRisk = infectionExposureRiskSlider.value() / 100;
 	
@@ -128,7 +128,7 @@ function initializeSimulationVariables()
 			p = population[int(random(population.length))];
 		}
 		var inf = new Infection();
-		inf.duration = floor(random(0, inf.latentPeriod + inf.communicabilityPeriod + 1));
+		inf.duration = floor(random(0, inf.latentPeriod + inf.infectivityPeriod + 1));
 		p.infections.push(inf);
 		p.isInfected = true;
 		++infectedPopulationCount;
@@ -165,9 +165,9 @@ var infectionMinLatentPeriodSlider;
 
 var infectionMaxLatentPeriodSlider;
 
-var infectionMinCommunicabilityPeriodSlider;
+var infectionMinInfectivityPeriodSlider;
 
-var infectionMaxCommunicabilityPeriodSlider;
+var infectionMaxInfectivityPeriodSlider;
 
 //var infectionMinIncubationPeriodSlider;
 
@@ -203,11 +203,11 @@ function setup() {
 	infectionMaxLatentPeriodSlider = createSlider(0, 100, 7);
 	infectionMaxLatentPeriodSlider.position(0, 340);
 	
-	infectionMinCommunicabilityPeriodSlider = createSlider(1, 200, 30);
-	infectionMinCommunicabilityPeriodSlider.position(0, 430);
+	infectionMinInfectivityPeriodSlider = createSlider(1, 200, 30);
+	infectionMinInfectivityPeriodSlider.position(0, 430);
 	
-	infectionMaxCommunicabilityPeriodSlider = createSlider(1, 200, 120);
-	infectionMaxCommunicabilityPeriodSlider.position(0, 520);
+	infectionMaxInfectivityPeriodSlider = createSlider(1, 200, 120);
+	infectionMaxInfectivityPeriodSlider.position(0, 520);
 	
 	infectionExposureRiskSlider = createSlider(1, 100, 5);
 	infectionExposureRiskSlider.position(0, 590);
@@ -297,14 +297,14 @@ function draw() {
 	text(infectionMaxLatentPeriodSlider.value(), 100, 330);
 
 	textAlign(LEFT);
-	text("Infection minimum\ncommunicability period:", 10, 380);
+	text("Infection minimum\ninfectivity period:", 10, 380);
 	textAlign(CENTER);
-	text(infectionMinCommunicabilityPeriodSlider.value(), 100, 420);
+	text(infectionMinInfectivityPeriodSlider.value(), 100, 420);
 	
 	textAlign(LEFT);
-	text("Infection maximum\ncommunicability period:", 10, 470);
+	text("Infection maximum\ninfectivity period:", 10, 470);
 	textAlign(CENTER);
-	text(infectionMaxCommunicabilityPeriodSlider.value(), 100, 510);
+	text(infectionMaxInfectivityPeriodSlider.value(), 100, 510);
 	
 	textAlign(LEFT);
 	text("Infection exposure risk:", 10, 560);
@@ -325,9 +325,9 @@ function draw() {
 	//text("Frame: " + floor(lastFrameTime), 700, 70);
 	text("Min. latent period: " + minLatentPeriod, 250, 50);
 	text("Max. latent period: " + maxLatentPeriod, 250, 70);
-	text("Min. communicability period: " + minCommunicabilityPeriod, 500, 50);
-	text("Max. communicability period: " + maxCommunicabilityPeriod, 500, 70);
-	text("Exposure risk: " + (exposureRisk * 100) + "%", 900, 50);
+	text("Min. infectivity period: " + minInfectivityPeriod, 500, 50);
+	text("Max. infectivity period: " + maxInfectivityPeriod, 500, 70);
+	text("Exposure risk: " + (exposureRisk * 100) + "%", 800, 50);
 	
 	infectedChartSeries.setData(infectedHistory);
 	//infectedChart.redraw();
@@ -401,7 +401,7 @@ function haveSex()
 		{
 			var inf = p.infections[j]
 			inf.duration += 1;
-			if(inf.duration > (inf.latentPeriod + inf.communicabilityPeriod)) {
+			if(inf.duration > (inf.latentPeriod + inf.infectivityPeriod)) {
 				p.infections.splice(j, 1);
 				if(p.infections.length == 0) {
 					p.isInfected = false;
