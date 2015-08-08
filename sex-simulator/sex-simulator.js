@@ -233,7 +233,7 @@ function setup() {
 		},
 		xAxis: {
 			title: {
-				text: 'Dayd'
+				text: 'Days'
 			}
 		},
 		yAxis: {
