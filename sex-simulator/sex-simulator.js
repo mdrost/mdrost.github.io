@@ -426,9 +426,10 @@ function draw() {
 	text("Selective matches: " + (selectiveMatched * daysPerYear / steps / selectivePopulationCount).toFixed(2) + " person/year", 250, 70);
 	
 	text("Population: " + populationCount, 250, 600);
-	text("Mean partners per year: " + meanPartnersPerYear, 250, 620);
-	text("Selective\nmean partners per year: " + selectiveMeanPartnersPerYear, 250, 640);
-	text("Selective preferred\nmean partners per year: " + selectivePreferredMeanPartnersPerYear, 250, 680);
+	text("Selective population: " + selectivePopulationCount, 250, 620);
+	text("Mean partners per year: " + meanPartnersPerYear, 250, 640);
+	text("Selective\nmean partners per year: " + selectiveMeanPartnersPerYear, 250, 660);
+	text("Selective preferred\nmean partners per year: " + selectivePreferredMeanPartnersPerYear, 250, 700);
 	text("Min. latent period: " + minLatentPeriod, 550, 600);
 	text("Max. latent period: " + maxLatentPeriod, 550, 620);
 	text("Min. infectivity period: " + minInfectivityPeriod, 800, 600);
