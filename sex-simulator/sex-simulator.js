@@ -36,6 +36,8 @@ var Person = function()
 	this.expectedPartnersPerYear = 0.0;
 	this.partner = null;
 	this.partnersCount = 0;
+	this.isSelective = false;
+	this.preferredMeanPartnersPerYear = 0.0;
 }
 
 // static variables
@@ -62,19 +64,35 @@ var population;
 
 var populationCount;
 
+var selectivePopulation;
+
+var selectivePopulationCount;
+
 var meanPartnersPerYear;
+
+var selectiveMeanPartnersPerYear;
+
+var selectivePreferredMeanPartnersPerYear;
 
 var lookingForPartnerPopulation;
 
 var lookingForPartnerPopulationSize;
 
+var infectedPopulationCount;
+
+var infectedSelectivePopulationCount;
+
 var infectedHistory;
+
+var selectiveInfectedHistory;
 
 var infectedPartialHistory;
 
-var infectedPopulationCount;
+var selectiveInfectedPartialHistory;
 
 var matched;
+
+var selectiveMatched;
 
 // other variables
 
@@ -82,7 +100,7 @@ var programFrameRate = 10;
 
 var maxSteps = 10000;
 
-var startInfectedPopulationCount = 100;
+var startInfectedPopulationCount = 200;
 
 var infectedPartialHistorySize = 100;
 
@@ -91,7 +109,12 @@ function initializeSimulationVariables()
 	steps = 0;
 	population = [];
 	populationCount = populationSizes[populationSizeSlider.value()];
+	selectivePopulation = [];
+	selectivePopulationCount = populationSizes[selectivePopulationSizeSlider.value()] / 10;
+	selectivePopulationCount = min(populationCount, selectivePopulationCount);
 	meanPartnersPerYear = meanPartnersPerYearSlider.value() / 20;
+	selectiveMeanPartnersPerYear = selectiveMeanPartnersPerYearSlider.value() / 20;
+	selectivePreferredMeanPartnersPerYear = selectivePreferredMeanPartnersPerYearSlider.value() / 20;
 	lookingForPartnerPopulation = []
 	lookingForPartnerPopulationSize = 0;
 	
@@ -105,18 +128,35 @@ function initializeSimulationVariables()
 	
 	exposureRisk = infectionExposureRiskSlider.value() / 100;
 	
-	infectedHistory = [];
-	infectedPartialHistory = [];
 	infectedPopulationCount = 0;
+	infectedSelectivePopulationCount = 0;
+	
+	infectedHistory = [];
+	nonselectiveInfectedHistory = [];
+	selectiveInfectedHistory = [];
+	infectedPartialHistory = [];
+	selectiveInfectedPartialHistory = [];
 	
 	matched = 0;
+	selectiveMatched = 0;
 	
 	var deviation = sqrt(2*log(meanPartnersPerYear));
-	for(var i = 0; i < populationCount; ++i)
+	for(var i = 0; i < (populationCount - selectivePopulationCount); ++i)
 	{
 		var p = new Person();
 		p.expectedPartnersPerYear = exp(randomGaussian(0, deviation));
 		population.push(p);
+		lookingForPartnerPopulation.push(p);
+	}
+	deviation = sqrt(2*log(selectiveMeanPartnersPerYear));
+	for(var i = 0; i < selectivePopulationCount; ++i)
+	{
+		var p = new Person();
+		p.expectedPartnersPerYear = exp(randomGaussian(0, deviation));
+		p.isSelective = true;
+		p.preferredMeanPartnersPerYear = selectivePreferredMeanPartnersPerYear;
+		population.push(p);
+		selectivePopulation.push(p);
 		lookingForPartnerPopulation.push(p);
 	}
 	
@@ -131,8 +171,12 @@ function initializeSimulationVariables()
 		inf.duration = floor(random(0, inf.latentPeriod + inf.infectivityPeriod + 1));
 		p.infections.push(inf);
 		p.isInfected = true;
-		++infectedPopulationCount;
+		infectedPopulationCount += 1;
+		if(p.isSelective) infectedSelectivePopulationCount += 1;
 	}
+	
+	shuffle(population);
+	shuffle(lookingForPartnerPopulation);
 	
 	currentFrameMillis = millis();
 }
@@ -175,12 +219,22 @@ var infectionMaxInfectivityPeriodSlider;
 
 var infectionExposureRiskSlider;
 
+var selectivePopulationSizeSlider;
+
+var selectiveMeanPartnersPerYearSlider;
+
+var selectivePreferredMeanPartnersPerYearSlider;
+
 var infectedChart;
 
 var infectedChartSeries;
 
+var infectedNonselectiveChartSeries;
+
+var infectedSelectiveChartSeries;
+
 function setup() {
-	createCanvas(windowWidth, windowHeight);
+	createCanvas(max(1300, windowWidth-20), 1000);
 	
 	startStopButton = createButton("Start/Stop");
 	startStopButton.text = "Derp";
@@ -191,7 +245,7 @@ function setup() {
 	restartButton.position(120, 10);
 	restartButton.mouseClicked(onRestartButtonClicked);
 	
-	populationSizeSlider = createSlider(0, populationSizes.length - 1, 3);
+	populationSizeSlider = createSlider(0, populationSizes.length - 1, 6);
 	populationSizeSlider.position(0, 90);
 	
 	meanPartnersPerYearSlider = createSlider(20, 200, 55);
@@ -209,8 +263,17 @@ function setup() {
 	infectionMaxInfectivityPeriodSlider = createSlider(1, 200, 120);
 	infectionMaxInfectivityPeriodSlider.position(0, 520);
 	
-	infectionExposureRiskSlider = createSlider(1, 100, 5);
+	infectionExposureRiskSlider = createSlider(1, 100, 10);
 	infectionExposureRiskSlider.position(0, 590);
+	
+	selectivePopulationSizeSlider = createSlider(0, populationSizes.length - 1, 3);
+	selectivePopulationSizeSlider.position(0, 660);
+	
+	selectiveMeanPartnersPerYearSlider = createSlider(20, 200, 55);
+	selectiveMeanPartnersPerYearSlider.position(0, 750);
+	
+	selectivePreferredMeanPartnersPerYearSlider = createSlider(1, 200, 55);
+	selectivePreferredMeanPartnersPerYearSlider.position(0, 840);
 	
 	infectedChart = new Highcharts.Chart({
 		chart: {
@@ -238,15 +301,23 @@ function setup() {
 		},
 		yAxis: {
 			title: {
-				text: 'Infected'
+				text: 'Infected %'
 			}
 		},
 		series: [{
 			name: 'All infected',
 			data: []
+		}, {
+			name: 'Nonselective infected',
+			data: []
+		}, {
+			name: 'Selective infected',
+			data: []
 		}]
 	});
 	infectedChartSeries = infectedChart.series[0];
+	infectedNonselectiveChartSeries = infectedChart.series[1];
+	infectedSelectiveChartSeries = infectedChart.series[2];
 	
 	initializeSimulationVariables();
 	
@@ -310,27 +381,64 @@ function draw() {
 	text("Infection exposure risk:", 10, 560);
 	textAlign(CENTER);
 	text(infectionExposureRiskSlider.value() + "%", 100, 580);
+	
+	textAlign(LEFT);
+	text("Selective population size:", 10, 630);
+	textAlign(CENTER);
+	text(populationSizes[selectivePopulationSizeSlider.value()] / 10, 100, 650);
+	
+	textAlign(LEFT);
+	text("Selective\nmean partners per year:", 10, 700);
+	textAlign(CENTER);
+	text((selectiveMeanPartnersPerYearSlider.value()/20).toFixed(2), 100, 740);
+	
+	textAlign(LEFT);
+	text("Selective preferred\nmean partners per year:", 10, 790);
+	textAlign(CENTER);
+	text((selectivePreferredMeanPartnersPerYearSlider.value()/20).toFixed(2), 100, 830);
 
 	textAlign(LEFT);
-	text("Days: " + steps, 250, 30);
+	//text("Days: " + steps, 250, 30);
 	//text("Draws: " + frameCount, 350, 30);
-	text("Population: " + populationCount, 400, 30);
-	text("Total infected: " + infectedPopulationCount, 600, 30);
+	//
+	text("All infected: " + infectedPopulationCount, 600, 30);
+	text("Nonselective infected: " + (infectedPopulationCount - infectedSelectivePopulationCount), 600, 50);
+	text("Selective infected: " + infectedSelectivePopulationCount, 600, 70);
+	
 	var infectedPartialHistorySum = 0;
 	for(var i = 0; i < infectedPartialHistory.length; ++i) infectedPartialHistorySum += infectedPartialHistory[i];
-	text("Infected in last " + infectedPartialHistorySize + " days: " + infectedPartialHistorySum, 850, 30);
-	//text("Matched: " + (matched * daysPerYear / steps / populationCount).toFixed(2), 250, 70);
+	text("All infected in last " + infectedPartialHistorySize + " days: " + infectedPartialHistorySum, 850, 30);
+	
+	var nonselectiveInfectedPartialHistorySum = 0;
+	for(var i = 0; i < infectedPartialHistory.length; ++i) nonselectiveInfectedPartialHistorySum += (infectedPartialHistory[i] - selectiveInfectedPartialHistory[i]);
+	text("Nonselective infected in last " + infectedPartialHistorySize + " days: " + nonselectiveInfectedPartialHistorySum, 850, 50);
+	
+	var selectiveInfectedPartialHistorySum = 0;
+	for(var i = 0; i < selectiveInfectedPartialHistory.length; ++i) selectiveInfectedPartialHistorySum += selectiveInfectedPartialHistory[i];
+	text("Selective infected in last " + infectedPartialHistorySize + " days: " + selectiveInfectedPartialHistorySum, 850, 70);
+	
 	//text("Logic: " + floor(lastLogicTime), 400, 70);
 	//text("Draw: " + floor(lastDrawTime), 550, 70);
 	//text("Frame: " + floor(lastFrameTime), 700, 70);
-	text("Min. latent period: " + minLatentPeriod, 250, 50);
-	text("Max. latent period: " + maxLatentPeriod, 250, 70);
-	text("Min. infectivity period: " + minInfectivityPeriod, 500, 50);
-	text("Max. infectivity period: " + maxInfectivityPeriod, 500, 70);
-	text("Exposure risk: " + (exposureRisk * 100) + "%", 800, 50);
 	
-	infectedChartSeries.setData(infectedHistory);
-	//infectedChart.redraw();
+	text("All matches: " + (matched * daysPerYear / steps / populationCount).toFixed(2) + " person/year", 250, 30);
+	text("Nonselective matches: " + ((matched - selectiveMatched) * daysPerYear / steps / (populationCount - selectivePopulationCount)).toFixed(2) + " person/year", 250, 50);
+	text("Selective matches: " + (selectiveMatched * daysPerYear / steps / selectivePopulationCount).toFixed(2) + " person/year", 250, 70);
+	
+	text("Population: " + populationCount, 250, 600);
+	text("Mean partners per year: " + meanPartnersPerYear, 250, 620);
+	text("Selective\nmean partners per year: " + selectiveMeanPartnersPerYear, 250, 640);
+	text("Selective preferred\nmean partners per year: " + selectivePreferredMeanPartnersPerYear, 250, 680);
+	text("Min. latent period: " + minLatentPeriod, 550, 600);
+	text("Max. latent period: " + maxLatentPeriod, 550, 620);
+	text("Min. infectivity period: " + minInfectivityPeriod, 800, 600);
+	text("Max. infectivity period: " + maxInfectivityPeriod, 800, 620);
+	text("Exposure risk: " + (exposureRisk * 100) + "%", 1100, 600);
+	
+	infectedChartSeries.setData(infectedHistory, false);
+	infectedNonselectiveChartSeries.setData(nonselectiveInfectedHistory, false);
+	infectedSelectiveChartSeries.setData(selectiveInfectedHistory, false);
+	infectedChart.redraw();
 	
 	var drawEnd = millis();
 	lastDrawTime = drawEnd - drawStart;
@@ -366,12 +474,22 @@ function matchPartners()
 		for(var j = 0; j < lookingForPartnerPopulationSize; ++j)
 		{
 			var pj = lookingForPartnerPopulation[j];
+			if(pi.isSelective && pj.expectedPartnersPerYear > pi.preferredMeanPartnersPerYear) continue;
+			if(pj.isSelective && pi.expectedPartnersPerYear > pj.preferredMeanPartnersPerYear) continue;
 			if(pi != pj)
 			{
-				lookingForPartnerPopulation[i] = lookingForPartnerPopulation[lookingForPartnerPopulationSize - 1];
-				lookingForPartnerPopulation[j] = lookingForPartnerPopulation[lookingForPartnerPopulationSize - 2];
-				lookingForPartnerPopulation[lookingForPartnerPopulationSize - 2] = pi;
-				lookingForPartnerPopulation[lookingForPartnerPopulationSize - 1] = pj;
+				if(i == (lookingForPartnerPopulationSize - 2) && j == (lookingForPartnerPopulationSize - 1)) {
+					console.log("debug");
+				}
+				if(j != (lookingForPartnerPopulationSize - 1)) {
+					lookingForPartnerPopulation[i] = lookingForPartnerPopulation[lookingForPartnerPopulationSize - 1];
+					lookingForPartnerPopulation[j] = lookingForPartnerPopulation[lookingForPartnerPopulationSize - 2];
+					lookingForPartnerPopulation[lookingForPartnerPopulationSize - 2] = pi;
+					lookingForPartnerPopulation[lookingForPartnerPopulationSize - 1] = pj;
+				} else {
+					lookingForPartnerPopulation[i] = lookingForPartnerPopulation[lookingForPartnerPopulationSize - 2];
+					lookingForPartnerPopulation[lookingForPartnerPopulationSize - 2] = pi;
+				}
 				if(pi.partner) pi.partner.partner = null;
 				if(pj.partner) pj.partner.partner = null;
 				pi.partner = pj;
@@ -381,7 +499,14 @@ function matchPartners()
 				pi.isLookingForPartner = false;
 				pj.isLookingForPartner = false;
 				lookingForPartnerPopulationSize -= 2;
-				matched += 2;
+				matched += 2
+				if(pi.isSelective) selectiveMatched += 1;
+				if(pj.isSelective) selectiveMatched += 1;
+				for(var k = 0; k < lookingForPartnerPopulationSize; ++k) {
+					if(!lookingForPartnerPopulation[k].isLookingForPartner) {
+						console.log("debug");
+					}
+				}
 				break;
 			}
 		}
@@ -394,7 +519,7 @@ function matchPartners()
 
 function haveSex()
 {
-	for(var i = 0; i < population.length; ++i)
+	for(var i = 0; i < populationCount; ++i)
 	{
 		var p = population[i];
 		for(var j = p.infections.length - 1; j >= 0; --j)
@@ -406,13 +531,15 @@ function haveSex()
 				if(p.infections.length == 0) {
 					p.isInfected = false;
 					infectedPopulationCount -= 1;
+					if(p.isSelective) infectedSelectivePopulationCount -= 1;
 				}
 			}
 		}
 	}
 	
 	var infected = 0;
-	for(var i = 0; i < population.length; ++i)
+	var selectiveInfected = 0;
+	for(var i = 0; i < populationCount; ++i)
 	{
 		var p = population[i];
 		if(!p.partner) continue;
@@ -434,6 +561,7 @@ function haveSex()
 					inf.infect(pp);
 					if(pp.infections.length == 1) {
 						infected += 1;
+						if(pp.isSelective) selectiveInfected += 1;
 					}
 				}
 			}
@@ -441,12 +569,14 @@ function haveSex()
 	}
 	
 	infectedPopulationCount += infected;
-	infectedHistory.push(infectedPopulationCount / population.length);
+	infectedSelectivePopulationCount += selectiveInfected;
+	infectedHistory.push(infectedPopulationCount / populationCount * 100);
+	selectiveInfectedHistory.push(infectedSelectivePopulationCount / selectivePopulationCount * 100);
+	nonselectiveInfectedHistory.push((infectedPopulationCount - infectedSelectivePopulationCount) / (populationCount - selectivePopulationCount) * 100);
 	if(infectedPartialHistory.length == infectedPartialHistorySize) infectedPartialHistory.splice(0, 1);
 	infectedPartialHistory.push(infected);
-	
-	//if(steps % 10 == 1)
-	//infectedChartSeries.addPoint(infectedPopulationCount, false);
+	if(selectiveInfectedPartialHistory.length == infectedPartialHistorySize) selectiveInfectedPartialHistory.splice(0, 1);
+	selectiveInfectedPartialHistory.push(selectiveInfected);
 }
 
 function step()
